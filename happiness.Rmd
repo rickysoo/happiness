@@ -1,0 +1,102 @@
+---
+title: "Give and Be Happy?"
+author: "Soo Chee Kiong, Ricky (17083991)"
+date: "January 8th, 2021"
+output:
+  pdf_document: default
+  theme: readable
+papersize: a4
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+*This is an exercise on data storytelling. Complete code can be found at <a href="https://rpubs.com/rickysoo/happiness" target="_blank">https://rpubs.com/rickysoo/happiness</a>*
+
+## Introduction
+
+Have you heard before that "it is more blessed to give than receive"? Is is true that the more we give, the happier we will be? Let's find out using data!
+
+Take a look at the World Happiness Report 2020, a survey of happiness in 156 countries around the world. The report ranks countries according to their "happiness score". This score is calculated from factors including GDP per capita, social support, life expectancy, generosity, perceptions of corruption, and freedom to make life choices.
+
+One of these factors called Generosity is comes from the responses to the question, "Have you donated money to a charity in the past month?". We will take this to indicate giving, and relate it to the happiness score to see if there is any correlation between them.
+
+```{r message=FALSE}
+library(dplyr)
+library(ggplot2)
+library(plotly)
+
+df <- read.csv('2020.csv') %>%
+    select(
+        Country = Country.name,
+        Region = Regional.indicator,
+        Happiness = Ladder.score,
+        `GDP Per Capita` = Logged.GDP.per.capita,
+        Generosity
+    ) %>%
+    mutate(
+        Region = as.factor(Region),
+        `GDP Per Capita` = exp(`GDP Per Capita`)
+    ) %>%
+    arrange(desc(Happiness))
+```
+
+
+```{r}
+bubble <- function(xvar) {
+    Corr <- cor.test(df[[xvar]], df[['Happiness']])['estimate'][[1]][1]
+    Corr <- signif(Corr, 3)
+    CorrText <- paste0('R = ', Corr)
+
+    fig <- ggplot(data = df, aes(x = .data[[xvar]], y = Happiness, label = Country)) +
+        geom_point(aes(color = Region, size = `GDP Per Capita`), alpha = 0.8) +
+        labs(x = xvar, y = 'Happiness') +
+        guides(size = FALSE) +
+        geom_smooth(method = 'lm', formula = y ~ x, se = FALSE) +
+        geom_text(label = CorrText, x = quantile(df[[xvar]], 0.9), y = max(df[['Happiness']]))
+
+    ggplotly(fig) %>%
+        layout(
+            title = paste0('Bubble Plot - ', xvar, ' and Happiness'),
+            width = 2000,
+            height = 2000,
+            margin = 50
+        )
+}
+```
+
+## Interpreting The Result
+
+```{r echo=TRUE}
+xvar <- 'Generosity'
+bubble(xvar)
+```
+
+Look at the bubble plot above. The circles are the individual countries. The bigger a circle is, the higher the GDP per capita the country has. The color of the circle indicates the region where the country is. The circles are spread across the chart according to the countries' scores in generosity and happiness. 
+
+The blue line drawn across the plot is called the regression line. It shows the strength of relationship between generosity and happiness. The strength of the correlation is indicated by the Pearson Coefficient written at the top of the chart. A value closer to 1 means a strong positive correlation. A value closer to -1 means a strong negative correlation. How about a value close to 0? No relationship!
+
+So what does it tell us about the relationship between generosity and happiness? Unfortunately, almost none. The regression is line is pretty flat. The Pearson Coefficient is just 0.069, very close to 0. Putting other things being equal, giving more doesn't seem to make one happier.
+
+## So What Makes Us Happy?
+
+So what might be more likely to make us happy? The size of the circles give the answer. Notice how the bigger circles tend to be above the regression line? The size is the GDP per capita, meaning how rich the citizens of the country is. Point your mouse to these circles and find out what these countries are. Notice their colors. Many of them are in Western Europe!
+
+Does it mean the richer the citizens in the country, the happier they are? Let's prove it using another bubble plot.
+
+```{r echo=TRUE}
+xvar <- 'GDP Per Capita'
+bubble(xvar)
+```
+
+Now you see a much stronger correlation between GDP per capita and happiness score. The regression line is more sloped than the earlier one. The Pearson Coefficient of 0.731 shows a much stronger positive relationship as it is closer to 1.
+
+So like it or not, money is important to make us happy. Money might not buy all happiness. But without money, happiness might be an elusive idea.
+
+---
+
+## References
+
+- World Happiness Report 2020 at <a href="https://worldhappiness.report/ed/2020/" target="_blank">https://worldhappiness.report/ed/2020/</a>
+- World Happiness Report data set at <a href="https://www.kaggle.com/mathurinache/world-happiness-report" target="_blank">https://www.kaggle.com/mathurinache/world-happiness-report</a>
